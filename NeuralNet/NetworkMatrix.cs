@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
+using System.Threading;
 
 namespace NeuralNet
 {
@@ -14,7 +14,9 @@ namespace NeuralNet
       private Matrix inputLayer, inputHiddenWeights, hiddenOutputWeights, hiddenResult, hiddenSum, outputResult, outputSum, errorOutput, targetOutput;
       private ActivationFunction activationFunction;
       private Random random;
+      private Thread thread;
 
+      public bool LearnBackground { get; set; }
       public struct HiddenLayer
       {
 
@@ -40,53 +42,30 @@ namespace NeuralNet
          inputNum = input.Columns;
          outputNum = output.Columns;
          InitLayers(input, output, hiddenLayers, hiddenNeurons);
-         //init(hiddenNeurons);
+            //init(hiddenNeurons);
+         thread = new Thread(() => BackgroundLearn(this));
+      }
 
+      public void RunBackgroundLearn()
+      {
+         thread.Start();
+      }
+
+      public void StopBackgroundLearn()
+      {
+         thread.Abort();
+         thread.Join();
       }
 
       public static double Sigmoid(double x)
       {
          return (1 / (1 + Math.Pow(Math.E, -x)));
       }
-
       public static double SigmoidPrime(double x)
       {
          return (Sigmoid(x) * (1-Sigmoid(x)));
-      }
+      }   
 
-      
-      private void init(int neurons)
-      {
-         if (neurons < 1)
-            throw new Exception("The layer must have atleast one neuron");
-         //get the rows in the input matix
-         //colomns for the hidden layer are defined by neurons
-        
-
-         inputHiddenWeights = new Matrix(inputLayer.Columns, neurons);
-         hiddenOutputWeights = new Matrix(inputHiddenWeights.Columns, targetOutput.Columns);
-         for (int i = 0; i < inputHiddenWeights.Rows; i++)
-         {
-            for (int j = 0; j < inputHiddenWeights.Columns; j++)
-            {
-               inputHiddenWeights[i,j] = random.NextDouble();
-            }
-         }
-
-         for (int i = 0; i < hiddenOutputWeights.Rows; i++)
-         {
-            for (int j = 0; j < hiddenOutputWeights.Columns; j++)
-            {
-               hiddenOutputWeights[i,j] = random.NextDouble();
-            }
-         }
-
-         
-         //ForwardPropagation();
-
-      }
-
-      //initialPropagation
       private void InitLayers(Matrix input, Matrix output, int layers, int neurons)
       {
          inputHiddenWeights = new Matrix(input.Columns, neurons);
@@ -171,8 +150,6 @@ namespace NeuralNet
 
 
       }
-
-
       private void BackwardPropagation()
       {
 
@@ -201,37 +178,6 @@ namespace NeuralNet
 
       }
 
-
-
-      /**
-      private void ForwardPropagation()
-      {
-         //Multiply input layer by wieghts to get sum and results (applied by fucntion)
-         hiddenSum = inputLayer * inputHiddenWeights;
-         hiddenResult = Matrix.Transform(Sigmoid, hiddenSum);
-
-         outputSum = hiddenResult * hiddenOutputWeights;
-         outputResult = Matrix.Transform(Sigmoid,outputSum);
-
-      }
-      private void BackPropagation()
-      {
-
-         errorOutput = targetOutput - outputResult; //calculate error in output
-
-         Matrix deltaOutputLayer = Matrix.HadamardProd(errorOutput, Matrix.Transform(SigmoidPrime, outputSum));
-         Matrix hiddenOutputChanges =  Matrix.Transpose(hiddenResult) * deltaOutputLayer * learningRate;
-
-
-         Matrix deltaHiddenLayer = Matrix.HadamardProd(deltaOutputLayer * Matrix.Transpose(hiddenOutputWeights) , Matrix.Transform(SigmoidPrime, hiddenSum));
-         Matrix inputHiddenChanges = Matrix.Transpose(inputLayer) * deltaHiddenLayer * learningRate;
-
-         inputHiddenWeights += inputHiddenChanges;
-         hiddenOutputWeights += hiddenOutputChanges;
-
-         
-      }
-      */
       public void Learn(int iterations)
       {
          while (iterations > 0)
@@ -254,6 +200,19 @@ namespace NeuralNet
 
       }
 
+      public void Learn()
+      {
+          BackwardPropagation();
+          ForwardPropagation();
+      }
+    
+      public static void BackgroundLearn(NetworkMatrix net)
+      {
+         while (true)
+         {
+            net.Learn();
+         }
+      }
 
 
       public Matrix Use(Matrix useInput)
