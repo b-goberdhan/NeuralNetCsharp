@@ -26,8 +26,11 @@ namespace NeuralNet
       {
          get { return matrix; }
       }
-
-      [System.Runtime.CompilerServices.IndexerName("Matrix")]
+      #if __MonoCS__
+         //Nothin
+      #else
+         [System.Runtime.CompilerServices.IndexerName("Matrix")]
+      #endif
       public double this[int x, int y]
       {
          get
